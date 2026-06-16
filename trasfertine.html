@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Note Spese Trasferta</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --ink-mid: #555;
+    --ink-light: #999;
+    --paper: #f7f6f3;
+    --white: #ffffff;
+    --sprint-blue: #0057b7;
+    --sprint-light: #e8f0fb;
+    --advance-amber: #b85c00;
+    --advance-light: #fdf0e3;
+    --revolut-purple: #6e3fdb;
+    --revolut-light: #f0ebff;
+    --border: #ddd8d0;
+    --success: #2d6a4f;
+    --danger: #c0392b;
+    --rule: 1px solid var(--border);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--ink);
+    color: var(--white);
+    padding: 20px 20px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header h1 {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #aaa;
+    margin-bottom: 2px;
+  }
+  header .trasferta-name {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  header .trasferta-name span { border-bottom: 1px dashed #555; }
+  header .totals-bar {
+    display: flex;
+    gap: 20px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #333;
+  }
+  .total-chip {
+    display: flex;
+    flex-direction: column;
+  }
+  .total-chip .label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #888;
+  }
+  .total-chip .amount {
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .total-chip.sprint .amount { color: #5b9ef5; }
+  .total-chip.anticipo .amount { color: #f5a623; }
+  .total-chip.totale .amount { color: var(--white); }
+
+  /* MAIN */
+  main { padding: 0 0 120px; }
+
+  /* SECTION HEADER */
+  .section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px 10px;
+    position: sticky;
+    top: 120px;
+    background: var(--paper);
+    z-index: 50;
+    border-bottom: var(--rule);
+  }
+  .section-head h2 {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+  }
+  .count-badge {
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--border);
+    color: var(--ink-mid);
+    border-radius: 10px;
+    padding: 1px 8px;
+  }
+
+  /* EXPENSE CARD */
+  .expense-list { padding: 8px 16px; }
+  .expense-card {
+    background: var(--white);
+    border: var(--rule);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    transition: box-shadow 0.15s;
+  }
+  .expense-card:active { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+  .expense-card .card-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 14px 14px 14px;
+  }
+  .receipt-thumb {
+    width: 52px;
+    height: 52px;
+    border-radius: 6px;
+    object-fit: cover;
+    border: var(--rule);
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  .receipt-thumb-empty {
+    width: 52px;
+    height: 52px;
+    border-radius: 6px;
+    border: 1.5px dashed var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    cursor: pointer;
+    color: var(--ink-light);
+    font-size: 20px;
+    background: var(--paper);
+  }
+  .card-info { flex: 1; min-width: 0; }
+  .card-info .desc {
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .card-info .meta {
+    font-size: 12px;
+    color: var(--ink-mid);
+    margin-top: 2px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .cat-tag {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: var(--border);
+    color: var(--ink-mid);
+  }
+  .card-right { text-align: right; flex-shrink: 0; }
+  .card-right .amount {
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .card-right .method-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    padding: 2px 7px;
+    border-radius: 4px;
+    margin-top: 4px;
+  }
+  .method-badge.sprint {
+    background: var(--sprint-light);
+    color: var(--sprint-blue);
+  }
+  .method-badge.anticipo {
+    background: var(--advance-light);
+    color: var(--advance-amber);
+  }
+  .method-badge.revolut {
+    background: var(--revolut-light);
+    color: var(--revolut-purple);
+  }
+  .card-actions {
+    border-top: var(--rule);
+    display: flex;
+  }
+  .card-actions button {
+    flex: 1;
+    border: none;
+    background: none;
+    padding: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--ink-mid);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+  }
+  .card-actions button:first-child { border-right: var(--rule); }
+  .card-actions .del-btn { color: var(--danger); }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 60px 30px;
+    color: var(--ink-light);
+  }
+  .empty-state .icon { font-size: 44px; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; }
+
+  /* FAB */
+  .fab {
+    position: fixed;
+    bottom: 28px;
+    right: 20px;
+    background: var(--ink);
+    color: var(--white);
+    border: none;
+    border-radius: 28px;
+    padding: 14px 22px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 200;
+  }
+
+  /* PDF BUTTON */
+  .pdf-btn {
+    position: fixed;
+    bottom: 28px;
+    left: 20px;
+    background: var(--white);
+    color: var(--ink);
+    border: 2px solid var(--ink);
+    border-radius: 28px;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 200;
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 500;
+    align-items: flex-end;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--white);
+    border-radius: 20px 20px 0 0;
+    padding: 24px 20px 40px;
+    width: 100%;
+    max-height: 92vh;
+    overflow-y: auto;
+    animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(40px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .modal h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .modal h2 button {
+    background: none;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    color: var(--ink-mid);
+    line-height: 1;
+  }
+
+  /* FORM */
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-mid);
+    margin-bottom: 6px;
+  }
+  .field input, .field select, .field textarea {
+    width: 100%;
+    border: var(--rule);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 16px;
+    font-family: inherit;
+    background: var(--paper);
+    color: var(--ink);
+    outline: none;
+    -webkit-appearance: none;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    border-color: var(--ink);
+    background: var(--white);
+  }
+
+  /* METHOD TOGGLE */
+  .method-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .method-toggle input[type=radio] { display: none; }
+  .method-toggle label {
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 6px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink-mid);
+    text-transform: none;
+    letter-spacing: 0;
+    transition: all 0.15s;
+  }
+  .method-toggle input[value=sprint]:checked + label {
+    border-color: var(--sprint-blue);
+    background: var(--sprint-light);
+    color: var(--sprint-blue);
+  }
+  .method-toggle input[value=anticipo]:checked + label {
+    border-color: var(--advance-amber);
+    background: var(--advance-light);
+    color: var(--advance-amber);
+  }
+  .method-toggle input[value=revolut]:checked + label {
+    border-color: var(--revolut-purple);
+    background: var(--revolut-light);
+    color: var(--revolut-purple);
+  }
+
+  /* PHOTO UPLOAD */
+  .photo-upload {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    color: var(--ink-mid);
+    font-size: 14px;
+    position: relative;
+    background: var(--paper);
+  }
+  .photo-upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .photo-upload .icon { font-size: 32px; margin-bottom: 6px; }
+  .photo-preview {
+    width: 100%;
+    max-height: 180px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: var(--rule);
+    display: block;
+  }
+  .remove-photo {
+    margin-top: 8px;
+    background: none;
+    border: none;
+    color: var(--danger);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* SAVE BUTTON */
+  .save-btn {
+    width: 100%;
+    background: var(--ink);
+    color: var(--white);
+    border: none;
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+
+  /* TRASFERTA EDIT MODAL */
+  .trasferta-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 600;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .trasferta-modal-overlay.open { display: flex; }
+  .trasferta-modal {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 24px 20px;
+    width: 100%;
+    max-width: 380px;
+  }
+  .trasferta-modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+  .trasferta-modal input {
+    width: 100%;
+    border: var(--rule);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 16px;
+    font-family: inherit;
+    background: var(--paper);
+    margin-bottom: 12px;
+    outline: none;
+  }
+  .modal-btns { display: flex; gap: 8px; }
+  .modal-btns button {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 2px solid var(--ink);
+  }
+  .modal-btns .cancel { background: none; color: var(--ink); }
+  .modal-btns .confirm { background: var(--ink); color: var(--white); }
+
+  /* IMAGE VIEWER */
+  .img-viewer-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.9);
+    z-index: 700;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+  .img-viewer-overlay.open { display: flex; }
+  .img-viewer-overlay img {
+    max-width: 95vw;
+    max-height: 85vh;
+    object-fit: contain;
+    border-radius: 8px;
+  }
+  .img-viewer-overlay button {
+    margin-top: 20px;
+    background: none;
+    border: 2px solid #fff;
+    color: #fff;
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-80px);
+    background: var(--ink);
+    color: var(--white);
+    padding: 12px 24px;
+    border-radius: 30px;
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 999;
+    transition: transform 0.3s ease;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <h1>Note Spese</h1>
+  <div class="trasferta-name" onclick="openTrasfertaModal()">
+    <span id="trasferta-title">Nuova Trasferta</span>
+    <span style="font-size:14px;color:#777">✎</span>
+  </div>
+  <div class="totals-bar">
+    <div class="total-chip sprint">
+      <span class="label">Carta Sprint</span>
+      <span class="amount" id="total-sprint">€ 0,00</span>
+    </div>
+    <div class="total-chip anticipo">
+      <span class="label">Carta Luca</span>
+      <span class="amount" id="total-anticipo">€ 0,00</span>
+    </div>
+    <div class="total-chip" style="--chip-color:#6e3fdb">
+      <span class="label" style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#888">Revolut Luca</span>
+      <span class="amount" id="total-revolut" style="color:#9b72f5;font-size:18px;font-weight:700">€ 0,00</span>
+    </div>
+    <div class="total-chip totale" style="margin-left:auto">
+      <span class="label">Totale</span>
+      <span class="amount" id="total-all">€ 0,00</span>
+    </div>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main>
+  <div class="section-head">
+    <h2>Scontrini</h2>
+    <span class="count-badge" id="count-badge">0</span>
+  </div>
+  <div class="expense-list" id="expense-list">
+    <div class="empty-state">
+      <div class="icon">🧾</div>
+      <p>Nessuna spesa ancora.<br>Tocca + per aggiungere il primo scontrino.</p>
+    </div>
+  </div>
+</main>
+
+<!-- FAB -->
+<button class="fab" onclick="openModal()">
+  <span style="font-size:20px">+</span> Aggiungi
+</button>
+
+<!-- PDF BUTTON -->
+<button class="pdf-btn" onclick="generatePDF()">
+  📄 PDF per Luca
+</button>
+
+<!-- ADD EXPENSE MODAL -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <h2>Nuova Spesa <button onclick="closeModal()">✕</button></h2>
+
+    <div class="field">
+      <label>Data</label>
+      <input type="date" id="f-date">
+    </div>
+
+    <div class="field">
+      <label>Descrizione</label>
+      <input type="text" id="f-desc" placeholder="es. Pranzo autogrill, Hotel Ibis…">
+    </div>
+
+    <div class="field">
+      <label>Categoria</label>
+      <select id="f-cat">
+        <option value="Vitto">🍽️ Vitto (pasti)</option>
+        <option value="Alloggio">🏨 Alloggio</option>
+        <option value="Trasporto">🚆 Trasporto</option>
+        <option value="Carburante">⛽ Carburante</option>
+        <option value="Parcheggio">🅿️ Parcheggio</option>
+        <option value="Accrediti">📸 Accrediti / Gara</option>
+        <option value="Varie">📦 Varie</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Importo (€)</label>
+      <input type="number" id="f-amount" placeholder="0.00" step="0.01" inputmode="decimal">
+    </div>
+
+    <div class="field">
+      <label>Pagato con</label>
+      <div class="method-toggle">
+        <input type="radio" name="method" id="m-sprint" value="sprint" checked>
+        <label for="m-sprint">💳 Carta Sprint</label>
+        <input type="radio" name="method" id="m-anticipo" value="anticipo">
+        <label for="m-anticipo">💶 Carta Luca</label>
+        <input type="radio" name="method" id="m-revolut" value="revolut">
+        <label for="m-revolut">🟣 Revolut Luca</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Foto scontrino</label>
+      <div id="photo-area">
+        <div class="photo-upload">
+          <input type="file" accept="image/*" capture="environment" id="f-photo" onchange="handlePhoto(this)">
+          <div class="icon">📷</div>
+          <div>Scatta foto o scegli dalla galleria</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="save-btn" onclick="saveExpense()">Salva spesa</button>
+  </div>
+</div>
+
+<!-- TRASFERTA NAME MODAL -->
+<div class="trasferta-modal-overlay" id="trasferta-modal">
+  <div class="trasferta-modal">
+    <h3>Nome trasferta</h3>
+    <input type="text" id="trasferta-input" placeholder="es. Copenhagen Sprint 2026">
+    <div class="modal-btns">
+      <button class="cancel" onclick="closeTrasfertaModal()">Annulla</button>
+      <button class="confirm" onclick="saveTrasfertaName()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMAGE VIEWER -->
+<div class="img-viewer-overlay" id="img-viewer">
+  <img id="img-viewer-img" src="" alt="Scontrino">
+  <button onclick="closeImgViewer()">Chiudi</button>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+  const { jsPDF } = window.jspdf;
+
+  let expenses = JSON.parse(localStorage.getItem('trasferte_expenses') || '[]');
+  let trasfertaName = localStorage.getItem('trasferta_name') || 'Nuova Trasferta';
+  let editingId = null;
+  let currentPhotoData = null;
+
+  function save() {
+    localStorage.setItem('trasferte_expenses', JSON.stringify(expenses));
+    localStorage.setItem('trasferta_name', trasfertaName);
+  }
+
+  function fmt(n) {
+    return '€ ' + Number(n).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  function renderAll() {
+    document.getElementById('trasferta-title').textContent = trasfertaName;
+    const list = document.getElementById('expense-list');
+
+    if (expenses.length === 0) {
+      list.innerHTML = `<div class="empty-state"><div class="icon">🧾</div><p>Nessuna spesa ancora.<br>Tocca + per aggiungere il primo scontrino.</p></div>`;
+    } else {
+      list.innerHTML = expenses.map((e, i) => `
+        <div class="expense-card">
+          <div class="card-main">
+            ${e.photo
+              ? `<img class="receipt-thumb" src="${e.photo}" onclick="viewImg('${e.photo}')" alt="scontrino">`
+              : `<div class="receipt-thumb-empty" onclick="openModalEdit(${i})">📷</div>`
+            }
+            <div class="card-info">
+              <div class="desc">${e.desc || '—'}</div>
+              <div class="meta">
+                <span>${e.date || ''}</span>
+                <span class="cat-tag">${e.cat}</span>
+              </div>
+            </div>
+            <div class="card-right">
+              <div class="amount">${fmt(e.amount)}</div>
+              <span class="method-badge ${e.method}">${e.method === 'sprint' ? 'Sprint' : e.method === 'anticipo' ? 'Carta Luca' : 'Revolut Luca'}</span>
+            </div>
+          </div>
+          <div class="card-actions">
+            <button onclick="openModalEdit(${i})">✏️ Modifica</button>
+            <button class="del-btn" onclick="deleteExpense(${i})">🗑️ Elimina</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    const sprint = expenses.filter(e => e.method === 'sprint').reduce((s, e) => s + Number(e.amount), 0);
+    const anticipo = expenses.filter(e => e.method === 'anticipo').reduce((s, e) => s + Number(e.amount), 0);
+    const revolut = expenses.filter(e => e.method === 'revolut').reduce((s, e) => s + Number(e.amount), 0);
+    document.getElementById('total-sprint').textContent = fmt(sprint);
+    document.getElementById('total-anticipo').textContent = fmt(anticipo);
+    document.getElementById('total-revolut').textContent = fmt(revolut);
+    document.getElementById('total-all').textContent = fmt(sprint + anticipo + revolut);
+    document.getElementById('count-badge').textContent = expenses.length;
+  }
+
+  // MODAL
+  function openModal() {
+    editingId = null;
+    currentPhotoData = null;
+    document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('f-desc').value = '';
+    document.getElementById('f-cat').value = 'Vitto';
+    document.getElementById('f-amount').value = '';
+    document.getElementById('m-sprint').checked = true;
+    resetPhotoArea();
+    document.getElementById('add-modal').classList.add('open');
+  }
+
+  function openModalEdit(i) {
+    editingId = i;
+    const e = expenses[i];
+    currentPhotoData = e.photo || null;
+    document.getElementById('f-date').value = e.date || '';
+    document.getElementById('f-desc').value = e.desc || '';
+    document.getElementById('f-cat').value = e.cat || 'Varie';
+    document.getElementById('f-amount').value = e.amount || '';
+    if (e.method === 'anticipo') document.getElementById('m-anticipo').checked = true;
+    else if (e.method === 'revolut') document.getElementById('m-revolut').checked = true;
+    else document.getElementById('m-sprint').checked = true;
+    if (e.photo) showPhotoPreview(e.photo);
+    else resetPhotoArea();
+    document.getElementById('add-modal').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('add-modal').classList.remove('open');
+  }
+
+  function handlePhoto(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      currentPhotoData = e.target.result;
+      showPhotoPreview(currentPhotoData);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function showPhotoPreview(src) {
+    document.getElementById('photo-area').innerHTML = `
+      <img src="${src}" class="photo-preview" onclick="viewImg('${src}')">
+      <button class="remove-photo" onclick="removePhoto()">✕ Rimuovi foto</button>
+    `;
+  }
+
+  function resetPhotoArea() {
+    document.getElementById('photo-area').innerHTML = `
+      <div class="photo-upload">
+        <input type="file" accept="image/*" capture="environment" id="f-photo" onchange="handlePhoto(this)">
+        <div class="icon">📷</div>
+        <div>Scatta foto o scegli dalla galleria</div>
+      </div>
+    `;
+  }
+
+  function removePhoto() {
+    currentPhotoData = null;
+    resetPhotoArea();
+  }
+
+  function saveExpense() {
+    const date = document.getElementById('f-date').value;
+    const desc = document.getElementById('f-desc').value.trim();
+    const cat = document.getElementById('f-cat').value;
+    const amount = parseFloat(document.getElementById('f-amount').value);
+    const method = document.querySelector('input[name=method]:checked').value;
+
+    if (!desc || isNaN(amount) || amount <= 0) {
+      showToast('⚠️ Descrizione e importo sono obbligatori');
+      return;
+    }
+
+    const obj = { date, desc, cat, amount, method, photo: currentPhotoData };
+
+    if (editingId !== null) {
+      expenses[editingId] = obj;
+      showToast('✅ Spesa aggiornata');
+    } else {
+      expenses.push(obj);
+      showToast('✅ Spesa aggiunta');
+    }
+
+    save();
+    renderAll();
+    closeModal();
+  }
+
+  function deleteExpense(i) {
+    if (!confirm('Eliminare questa spesa?')) return;
+    expenses.splice(i, 1);
+    save();
+    renderAll();
+    showToast('🗑️ Spesa eliminata');
+  }
+
+  // TRASFERTA MODAL
+  function openTrasfertaModal() {
+    document.getElementById('trasferta-input').value = trasfertaName;
+    document.getElementById('trasferta-modal').classList.add('open');
+  }
+  function closeTrasfertaModal() {
+    document.getElementById('trasferta-modal').classList.remove('open');
+  }
+  function saveTrasfertaName() {
+    const v = document.getElementById('trasferta-input').value.trim();
+    if (v) { trasfertaName = v; save(); renderAll(); }
+    closeTrasfertaModal();
+  }
+
+  // IMAGE VIEWER
+  function viewImg(src) {
+    document.getElementById('img-viewer-img').src = src;
+    document.getElementById('img-viewer').classList.add('open');
+  }
+  function closeImgViewer() {
+    document.getElementById('img-viewer').classList.remove('open');
+  }
+
+  // PDF GENERATION
+  async function generatePDF() {
+    if (expenses.length === 0) { showToast('⚠️ Nessuna spesa da esportare'); return; }
+
+    showToast('⏳ Generazione PDF…');
+
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const W = 210, H = 297;
+    const margin = 18;
+    const colW = W - margin * 2;
+    let y = margin;
+
+    // Header background
+    doc.setFillColor(26, 26, 26);
+    doc.rect(0, 0, W, 38, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('NOTE SPESE TRASFERTA', margin, 13);
+    doc.setFontSize(18);
+    doc.text(trasfertaName, margin, 25);
+    const today = new Date().toLocaleDateString('it-IT', { day:'2-digit', month:'long', year:'numeric' });
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(180, 180, 180);
+    doc.text('Ivan Benedetto  ·  Generato il ' + today, margin, 33);
+
+    y = 50;
+
+    // Totals
+    const sprint = expenses.filter(e => e.method === 'sprint').reduce((s, e) => s + Number(e.amount), 0);
+    const anticipo = expenses.filter(e => e.method === 'anticipo').reduce((s, e) => s + Number(e.amount), 0);
+    const revolut = expenses.filter(e => e.method === 'revolut').reduce((s, e) => s + Number(e.amount), 0);
+    const totale = sprint + anticipo + revolut;
+
+    // Summary box by method
+    doc.setFillColor(245, 244, 241);
+    doc.roundedRect(margin, y, colW, 22, 3, 3, 'F');
+    doc.setTextColor(26, 26, 26);
+    doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+    doc.text('CARTA SPRINT', margin + 6, y + 8);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(13);
+    doc.text(fmt(sprint), margin + 6, y + 17);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+    doc.text('CARTA LUCA', margin + 60, y + 8);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(13);
+    doc.text(fmt(anticipo), margin + 60, y + 17);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+    doc.text('REVOLUT LUCA', margin + 110, y + 8);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(13);
+    doc.text(fmt(revolut), margin + 110, y + 17);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+    doc.text('TOTALE', margin + 158, y + 8);
+    doc.setFontSize(14);
+    doc.text(fmt(totale), margin + 158, y + 17);
+
+    y += 30;
+
+    // ── RIEPILOGO PER CATEGORIA ──
+    doc.setFillColor(26, 26, 26);
+    doc.rect(margin, y, colW, 7, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.text('RIEPILOGO PER CATEGORIA', margin + 2, y + 5);
+    y += 7;
+
+    const cats = ['Vitto', 'Alloggio', 'Trasporto', 'Carburante', 'Parcheggio', 'Accrediti', 'Varie'];
+    const catEmoji = {'Vitto':'Vitto', 'Alloggio':'Alloggio', 'Trasporto':'Trasporto', 'Carburante':'Carburante', 'Parcheggio':'Parcheggio', 'Accrediti':'Accrediti', 'Varie':'Varie'};
+    let ci = 0;
+    cats.forEach(cat => {
+      const items = expenses.filter(e => e.cat === cat);
+      if (items.length === 0) return;
+      const catTotal = items.reduce((s, e) => s + Number(e.amount), 0);
+      doc.setFillColor(ci % 2 === 0 ? 255 : 248, ci % 2 === 0 ? 255 : 248, ci % 2 === 0 ? 255 : 248);
+      doc.rect(margin, y, colW, 8, 'F');
+      doc.setTextColor(26, 26, 26);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+      doc.text(cat, margin + 4, y + 5.5);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+      doc.setTextColor(120, 120, 120);
+      doc.text(`${items.length} voce${items.length > 1 ? 'i' : ''}`, margin + 55, y + 5.5);
+      doc.setTextColor(26, 26, 26);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+      doc.text(fmt(catTotal), margin + colW - 2, y + 5.5, { align: 'right' });
+      y += 8;
+      ci++;
+    });
+
+    // Category total row
+    doc.setFillColor(26, 26, 26);
+    doc.rect(margin, y, colW, 8, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+    doc.text('TOTALE', margin + 4, y + 5.5);
+    doc.text(fmt(totale), margin + colW - 2, y + 5.5, { align: 'right' });
+    y += 16;
+
+    // ── DETTAGLIO SPESE ──
+    if (y > H - 60) { doc.addPage(); y = margin; }
+
+    doc.setFillColor(26, 26, 26);
+    doc.rect(margin, y, colW, 7, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5);
+    doc.text('DATA', margin + 2, y + 5);
+    doc.text('DESCRIZIONE', margin + 22, y + 5);
+    doc.text('CATEGORIA', margin + 88, y + 5);
+    doc.text('METODO', margin + 128, y + 5);
+    doc.text('IMPORTO', margin + colW - 2, y + 5, { align: 'right' });
+    y += 7;
+
+    for (let i = 0; i < expenses.length; i++) {
+      const e = expenses[i];
+      if (y > H - 20) { doc.addPage(); y = margin; }
+      const rowH = 8;
+      doc.setFillColor(i % 2 === 0 ? 255 : 248, i % 2 === 0 ? 255 : 248, i % 2 === 0 ? 255 : 248);
+      doc.rect(margin, y, colW, rowH, 'F');
+      doc.setTextColor(26, 26, 26);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+      doc.text(e.date || '', margin + 2, y + 5.5);
+      const descTrunc = e.desc.length > 34 ? e.desc.substring(0, 32) + '…' : e.desc;
+      doc.text(descTrunc, margin + 22, y + 5.5);
+      doc.text(e.cat, margin + 88, y + 5.5);
+      if (e.method === 'sprint') {
+        doc.setFillColor(232, 240, 251); doc.roundedRect(margin + 126, y + 1.5, 26, 5, 1, 1, 'F');
+        doc.setTextColor(0, 87, 183);
+      } else if (e.method === 'revolut') {
+        doc.setFillColor(240, 235, 255); doc.roundedRect(margin + 126, y + 1.5, 26, 5, 1, 1, 'F');
+        doc.setTextColor(110, 63, 219);
+      } else {
+        doc.setFillColor(253, 240, 227); doc.roundedRect(margin + 126, y + 1.5, 26, 5, 1, 1, 'F');
+        doc.setTextColor(184, 92, 0);
+      }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5);
+      doc.text(e.method === 'sprint' ? 'CARTA SPRINT' : e.method === 'revolut' ? 'REVOLUT LUCA' : 'CARTA LUCA', margin + 128, y + 5.3);
+      doc.setTextColor(26, 26, 26);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5);
+      doc.text(fmt(e.amount), margin + colW - 2, y + 5.5, { align: 'right' });
+      y += rowH;
+    }
+
+    // Total row
+    doc.setFillColor(26, 26, 26);
+    doc.rect(margin, y, colW, 8, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+    doc.text('TOTALE GENERALE', margin + 2, y + 5.5);
+    doc.text(fmt(totale), margin + colW - 2, y + 5.5, { align: 'right' });
+    y += 8;
+
+    // ── ALLEGATI SCONTRINI ──
+    const withPhotos = expenses.filter(e => e.photo);
+    if (withPhotos.length > 0) {
+      doc.addPage();
+      doc.setFillColor(26, 26, 26);
+      doc.rect(0, 0, W, 20, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+      doc.text('ALLEGATI — SCONTRINI', margin, 13);
+      y = 28;
+
+      for (let i = 0; i < withPhotos.length; i++) {
+        const e = withPhotos[i];
+        if (y > H - 90) { doc.addPage(); y = margin; }
+
+        doc.setFillColor(245, 244, 241);
+        doc.roundedRect(margin, y, colW, 7, 2, 2, 'F');
+        doc.setTextColor(26, 26, 26);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+        const label = `${e.date || ''} — ${e.desc} — ${fmt(e.amount)}`;
+        doc.text(label, margin + 3, y + 5);
+        y += 10;
+
+        try {
+          const imgData = await resizeImage(e.photo, 900, 700);
+          // detect format
+          let fmt_img = 'JPEG';
+          if (imgData.startsWith('data:image/png')) fmt_img = 'PNG';
+          else if (imgData.startsWith('data:image/webp')) fmt_img = 'WEBP';
+
+          const imgProps = doc.getImageProperties(imgData);
+          const maxW = colW;
+          const maxH = 85;
+          let iW = maxW;
+          let iH = (imgProps.height / imgProps.width) * iW;
+          if (iH > maxH) { iH = maxH; iW = (imgProps.width / imgProps.height) * iH; }
+          const imgX = margin + (colW - iW) / 2;
+          doc.addImage(imgData, fmt_img, imgX, y, iW, iH);
+          y += iH + 14;
+        } catch (err) {
+          doc.setTextColor(150, 150, 150);
+          doc.setFont('helvetica', 'italic'); doc.setFontSize(8);
+          doc.text('[immagine non disponibile: ' + (err.message || '') + ']', margin, y + 5);
+          y += 14;
+        }
+      }
+    }
+
+    // Footer
+    const pageCount = doc.getNumberOfPages();
+    for (let p = 1; p <= pageCount; p++) {
+      doc.setPage(p);
+      doc.setDrawColor(220, 216, 208);
+      doc.line(margin, H - 12, W - margin, H - 12);
+      doc.setTextColor(170, 170, 170);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
+      doc.text(`Ivan Benedetto · ${trasfertaName}`, margin, H - 7);
+      doc.text(`Pagina ${p} di ${pageCount}`, W - margin, H - 7, { align: 'right' });
+    }
+
+    const filename = `NoteSpese_${trasfertaName.replace(/\s+/g, '_')}.pdf`;
+    doc.save(filename);
+    showToast('✅ PDF scaricato!');
+  }
+
+  function resizeImage(dataUrl, maxW, maxH) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = function() {
+        let w = img.width, h = img.height;
+        if (w > maxW || h > maxH) {
+          if (w / maxW > h / maxH) { h = Math.round(h * maxW / w); w = maxW; }
+          else { w = Math.round(w * maxH / h); h = maxH; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = reject;
+      img.src = dataUrl;
+    });
+  }
+
+  // INIT
+  renderAll();
+</script>
+</body>
+</html>
