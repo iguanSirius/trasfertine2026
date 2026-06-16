@@ -625,7 +625,7 @@
       <label>Foto scontrino</label>
       <div id="photo-area">
         <div class="photo-upload">
-          <input type="file" accept="image/*" capture="environment" id="f-photo" onchange="handlePhoto(this)">
+          <input type="file" accept="image/*" id="f-photo" onchange="handlePhoto(this)">
           <div class="icon">📷</div>
           <div>Scatta foto o scegli dalla galleria</div>
         </div>
@@ -864,15 +864,12 @@
     // Header background
     doc.setFillColor(26, 26, 26);
     doc.rect(0, 0, W, 38, 'F');
-
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.text('NOTE SPESE TRASFERTA', margin, 13);
-
     doc.setFontSize(18);
     doc.text(trasfertaName, margin, 25);
-
     const today = new Date().toLocaleDateString('it-IT', { day:'2-digit', month:'long', year:'numeric' });
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
@@ -881,180 +878,184 @@
 
     y = 50;
 
-    // Summary box
+    // Totals
     const sprint = expenses.filter(e => e.method === 'sprint').reduce((s, e) => s + Number(e.amount), 0);
     const anticipo = expenses.filter(e => e.method === 'anticipo').reduce((s, e) => s + Number(e.amount), 0);
     const revolut = expenses.filter(e => e.method === 'revolut').reduce((s, e) => s + Number(e.amount), 0);
+    const totale = sprint + anticipo + revolut;
 
+    // Summary box by method
     doc.setFillColor(245, 244, 241);
     doc.roundedRect(margin, y, colW, 22, 3, 3, 'F');
-
     doc.setTextColor(26, 26, 26);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8); doc.setFont('helvetica', 'bold');
     doc.text('CARTA SPRINT', margin + 6, y + 8);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(13);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(13);
     doc.text(fmt(sprint), margin + 6, y + 17);
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
     doc.text('CARTA LUCA', margin + 60, y + 8);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(13);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(13);
     doc.text(fmt(anticipo), margin + 60, y + 17);
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
     doc.text('REVOLUT LUCA', margin + 110, y + 8);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(13);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(13);
     doc.text(fmt(revolut), margin + 110, y + 17);
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
     doc.text('TOTALE', margin + 158, y + 8);
     doc.setFontSize(14);
-    doc.text(fmt(sprint + anticipo + revolut), margin + 158, y + 17);
+    doc.text(fmt(totale), margin + 158, y + 17);
 
     y += 30;
 
-    // Table header
+    // ── RIEPILOGO PER CATEGORIA ──
     doc.setFillColor(26, 26, 26);
-    doc.rect(margin, y, colW, 8, 'F');
+    doc.rect(margin, y, colW, 7, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7.5);
-    doc.text('DATA', margin + 2, y + 5.5);
-    doc.text('DESCRIZIONE', margin + 22, y + 5.5);
-    doc.text('CATEGORIA', margin + 90, y + 5.5);
-    doc.text('METODO', margin + 130, y + 5.5);
-    doc.text('IMPORTO', margin + 158, y + 5.5);
+    doc.text('RIEPILOGO PER CATEGORIA', margin + 2, y + 5);
+    y += 7;
 
-    y += 8;
+    const cats = ['Vitto', 'Alloggio', 'Trasporto', 'Carburante', 'Parcheggio', 'Accrediti', 'Varie'];
+    const catEmoji = {'Vitto':'Vitto', 'Alloggio':'Alloggio', 'Trasporto':'Trasporto', 'Carburante':'Carburante', 'Parcheggio':'Parcheggio', 'Accrediti':'Accrediti', 'Varie':'Varie'};
+    let ci = 0;
+    cats.forEach(cat => {
+      const items = expenses.filter(e => e.cat === cat);
+      if (items.length === 0) return;
+      const catTotal = items.reduce((s, e) => s + Number(e.amount), 0);
+      doc.setFillColor(ci % 2 === 0 ? 255 : 248, ci % 2 === 0 ? 255 : 248, ci % 2 === 0 ? 255 : 248);
+      doc.rect(margin, y, colW, 8, 'F');
+      doc.setTextColor(26, 26, 26);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+      doc.text(cat, margin + 4, y + 5.5);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+      doc.setTextColor(120, 120, 120);
+      doc.text(`${items.length} voce${items.length > 1 ? 'i' : ''}`, margin + 55, y + 5.5);
+      doc.setTextColor(26, 26, 26);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+      doc.text(fmt(catTotal), margin + colW - 2, y + 5.5, { align: 'right' });
+      y += 8;
+      ci++;
+    });
 
-    // Table rows
+    // Category total row
+    doc.setFillColor(26, 26, 26);
+    doc.rect(margin, y, colW, 8, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+    doc.text('TOTALE', margin + 4, y + 5.5);
+    doc.text(fmt(totale), margin + colW - 2, y + 5.5, { align: 'right' });
+    y += 16;
+
+    // ── DETTAGLIO SPESE ──
+    if (y > H - 60) { doc.addPage(); y = margin; }
+
+    doc.setFillColor(26, 26, 26);
+    doc.rect(margin, y, colW, 7, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5);
+    doc.text('DATA', margin + 2, y + 5);
+    doc.text('DESCRIZIONE', margin + 22, y + 5);
+    doc.text('CATEGORIA', margin + 88, y + 5);
+    doc.text('METODO', margin + 128, y + 5);
+    doc.text('IMPORTO', margin + colW - 2, y + 5, { align: 'right' });
+    y += 7;
+
     for (let i = 0; i < expenses.length; i++) {
       const e = expenses[i];
-
-      if (y > H - 60) {
-        doc.addPage();
-        y = margin;
-      }
-
-      const rowH = 9;
+      if (y > H - 20) { doc.addPage(); y = margin; }
+      const rowH = 8;
       doc.setFillColor(i % 2 === 0 ? 255 : 248, i % 2 === 0 ? 255 : 248, i % 2 === 0 ? 255 : 248);
       doc.rect(margin, y, colW, rowH, 'F');
-
       doc.setTextColor(26, 26, 26);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.text(e.date || '', margin + 2, y + 6);
-
-      const descTrunc = e.desc.length > 36 ? e.desc.substring(0, 34) + '…' : e.desc;
-      doc.text(descTrunc, margin + 22, y + 6);
-      doc.text(e.cat, margin + 90, y + 6);
-
-      // Method badge
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+      doc.text(e.date || '', margin + 2, y + 5.5);
+      const descTrunc = e.desc.length > 34 ? e.desc.substring(0, 32) + '…' : e.desc;
+      doc.text(descTrunc, margin + 22, y + 5.5);
+      doc.text(e.cat, margin + 88, y + 5.5);
       if (e.method === 'sprint') {
-        doc.setFillColor(232, 240, 251);
-        doc.roundedRect(margin + 128, y + 1.5, 26, 5.5, 1, 1, 'F');
+        doc.setFillColor(232, 240, 251); doc.roundedRect(margin + 126, y + 1.5, 26, 5, 1, 1, 'F');
         doc.setTextColor(0, 87, 183);
       } else if (e.method === 'revolut') {
-        doc.setFillColor(240, 235, 255);
-        doc.roundedRect(margin + 128, y + 1.5, 26, 5.5, 1, 1, 'F');
+        doc.setFillColor(240, 235, 255); doc.roundedRect(margin + 126, y + 1.5, 26, 5, 1, 1, 'F');
         doc.setTextColor(110, 63, 219);
       } else {
-        doc.setFillColor(253, 240, 227);
-        doc.roundedRect(margin + 128, y + 1.5, 26, 5.5, 1, 1, 'F');
+        doc.setFillColor(253, 240, 227); doc.roundedRect(margin + 126, y + 1.5, 26, 5, 1, 1, 'F');
         doc.setTextColor(184, 92, 0);
       }
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7);
-      doc.text(e.method === 'sprint' ? 'CARTA SPRINT' : e.method === 'revolut' ? 'REVOLUT LUCA' : 'CARTA LUCA', margin + 130, y + 5.8);
-
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5);
+      doc.text(e.method === 'sprint' ? 'CARTA SPRINT' : e.method === 'revolut' ? 'REVOLUT LUCA' : 'CARTA LUCA', margin + 128, y + 5.3);
       doc.setTextColor(26, 26, 26);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.text(fmt(e.amount), margin + colW - 2, y + 6, { align: 'right' });
-
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5);
+      doc.text(fmt(e.amount), margin + colW - 2, y + 5.5, { align: 'right' });
       y += rowH;
     }
 
     // Total row
     doc.setFillColor(26, 26, 26);
-    doc.rect(margin, y, colW, 9, 'F');
+    doc.rect(margin, y, colW, 8, 'F');
     doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.text('TOTALE GENERALE', margin + 2, y + 6);
-    doc.text(fmt(sprint + anticipo + revolut), margin + colW - 2, y + 6, { align: 'right' });
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+    doc.text('TOTALE GENERALE', margin + 2, y + 5.5);
+    doc.text(fmt(totale), margin + colW - 2, y + 5.5, { align: 'right' });
+    y += 8;
 
-    y += 18;
-
-    // Receipts section
+    // ── ALLEGATI SCONTRINI ──
     const withPhotos = expenses.filter(e => e.photo);
     if (withPhotos.length > 0) {
       doc.addPage();
-      y = margin;
-
       doc.setFillColor(26, 26, 26);
       doc.rect(0, 0, W, 20, 'F');
       doc.setTextColor(255, 255, 255);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
       doc.text('ALLEGATI — SCONTRINI', margin, 13);
-
       y = 28;
 
       for (let i = 0; i < withPhotos.length; i++) {
         const e = withPhotos[i];
-
-        if (y > H - 80) {
-          doc.addPage();
-          y = margin;
-        }
+        if (y > H - 90) { doc.addPage(); y = margin; }
 
         doc.setFillColor(245, 244, 241);
         doc.roundedRect(margin, y, colW, 7, 2, 2, 'F');
         doc.setTextColor(26, 26, 26);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(8);
-        doc.text(`${e.date || ''} — ${e.desc} — ${fmt(e.amount)}`, margin + 3, y + 5);
-
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+        const label = `${e.date || ''} — ${e.desc} — ${fmt(e.amount)}`;
+        doc.text(label, margin + 3, y + 5);
         y += 10;
 
         try {
-          // Compress/resize image before embedding
-          const imgData = await resizeImage(e.photo, 800, 600);
+          const imgData = await resizeImage(e.photo, 900, 700);
+          // detect format
+          let fmt_img = 'JPEG';
+          if (imgData.startsWith('data:image/png')) fmt_img = 'PNG';
+          else if (imgData.startsWith('data:image/webp')) fmt_img = 'WEBP';
+
           const imgProps = doc.getImageProperties(imgData);
           const maxW = colW;
-          const maxH = 80;
+          const maxH = 85;
           let iW = maxW;
           let iH = (imgProps.height / imgProps.width) * iW;
           if (iH > maxH) { iH = maxH; iW = (imgProps.width / imgProps.height) * iH; }
           const imgX = margin + (colW - iW) / 2;
-          doc.addImage(imgData, 'JPEG', imgX, y, iW, iH);
-          y += iH + 12;
+          doc.addImage(imgData, fmt_img, imgX, y, iW, iH);
+          y += iH + 14;
         } catch (err) {
           doc.setTextColor(150, 150, 150);
-          doc.setFont('helvetica', 'italic');
-          doc.setFontSize(8);
-          doc.text('[immagine non disponibile]', margin, y + 5);
+          doc.setFont('helvetica', 'italic'); doc.setFontSize(8);
+          doc.text('[immagine non disponibile: ' + (err.message || '') + ']', margin, y + 5);
           y += 14;
         }
       }
     }
 
-    // Footer on all pages
+    // Footer
     const pageCount = doc.getNumberOfPages();
     for (let p = 1; p <= pageCount; p++) {
       doc.setPage(p);
       doc.setDrawColor(220, 216, 208);
       doc.line(margin, H - 12, W - margin, H - 12);
       doc.setTextColor(170, 170, 170);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
       doc.text(`Ivan Benedetto · ${trasfertaName}`, margin, H - 7);
       doc.text(`Pagina ${p} di ${pageCount}`, W - margin, H - 7, { align: 'right' });
     }
